@@ -1,0 +1,31 @@
+{
+  "name": "control-center-orchestrator",
+  "version": "1.0.0",
+  "description": "Executable TypeScript orchestrator for the product development cycle system",
+  "main": "src/orchestrator.ts",
+  "scripts": {
+    "orchestrator": "ts-node src/orchestrator.ts",
+    "status": "ts-node src/orchestrator.ts status",
+    "check": "ts-node src/orchestrator.ts check",
+    "instructions": "ts-node src/orchestrator.ts instructions",
+    "test": "ts-node tests/run-tests.ts",
+    "daemon": "ts-node src/daemon.ts start",
+    "daemon:start": "ts-node src/daemon.ts start",
+    "daemon:stop": "ts-node src/daemon.ts stop",
+    "daemon:status": "ts-node src/daemon.ts status",
+    "queue": "ts-node src/orchestrator.ts queue",
+    "queue:scan": "ts-node src/orchestrator.ts queue scan",
+    "queue:status": "ts-node src/orchestrator.ts queue status",
+    "queue:next": "ts-node src/orchestrator.ts queue next",
+    "analyze": "ts-node src/orchestrator.ts analyze",
+    "analyze:metrics": "ts-node src/orchestrator.ts analyze metrics",
+    "analyze:clear": "ts-node src/orchestrator.ts analyze clear",
+    "build": "tsc"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  }
+}
