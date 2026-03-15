@@ -1366,7 +1366,7 @@ section("4.5 Jidoka — evaluateCriterion directly");
 
 {
   const report: JidokaDefectReport = {
-    description: "Critical",
+    description: "This defect blocks downstream tasks, cannot proceed",
     step: "D5",
     context: "test",
     consecutive_failures: 1,
@@ -1388,9 +1388,9 @@ section("4.6 Jidoka — all 5 criteria match");
 {
   const state = makeState({ current_step: "D5", current_block: "development_cycle" });
   const report: JidokaDefectReport = {
-    description: "Massive system failure",
+    description: "Cannot proceed, contradicts specification, data corruption, contradicts plan",
     step: "D5",
-    context: "all tasks",
+    context: "breaks downstream tasks in all tasks",
     consecutive_failures: 10,
   };
   const result = checkJidoka(state, report);

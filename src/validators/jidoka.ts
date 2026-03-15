@@ -1,9 +1,6 @@
-// =============================================================================
-// JIDOKA Check — зупинка конвеєра при критичному дефекті
-// Конвертовано з: control_center/docs/system_cycle.md
-//   (Секція "Захисні механізми → JIDOKA", критерії J1–J5)
-// Роль: O5 — перевірка дефектів під час виконання задач (L10, D5)
-// =============================================================================
+// JIDOKA Check — stop-the-line on critical defects
+// Active during task execution steps (L10, D5).
+// 5 criteria (J1–J5): if any match → STOP pipeline.
 
 import type {
   SystemState,
@@ -13,15 +10,7 @@ import type {
 import { JIDOKA_CRITERIA } from "../types";
 import { collectJidokaStop } from "../learning/metrics-collector";
 
-// =============================================================================
-// Кроки на яких JIDOKA активна (L10, D5 — виконання задач)
-// =============================================================================
-
 const JIDOKA_ACTIVE_STEPS: Step[] = ["L10", "D5"];
-
-// =============================================================================
-// Опис дефекту для перевірки JIDOKA
-// =============================================================================
 
 export interface JidokaDefectReport {
   /** Опис дефекту виявленого агентом */
@@ -33,10 +22,6 @@ export interface JidokaDefectReport {
   /** Скільки задач поспіль мають спільну причину (для J4) */
   consecutive_failures?: number;
 }
-
-// =============================================================================
-// Результат перевірки JIDOKA
-// =============================================================================
 
 export type JidokaVerdict = "STOP" | "CONTINUE";
 
@@ -56,37 +41,46 @@ export interface JidokaCheckResult {
   jidoka_applicable: boolean;
 }
 
-// =============================================================================
-// НЕ є критичним дефектом (виключення)
-// Дослівно з system_cycle.md
-// =============================================================================
-
+/** Defect descriptions matching these terms are NOT critical */
 const NOT_CRITICAL: string[] = [
   "Окремий баг, який можна виправити в рамках задачі",
   "Стилістичні або косметичні проблеми",
   "Проблеми продуктивності, що не блокують функціональність",
 ];
 
-// =============================================================================
-// Перевірка окремих критеріїв J1–J5
-// Кожна функція приймає опис дефекту і повертає boolean.
-// Агент викликає checkJidoka з описом — логіка перевіряє відповідність.
-// =============================================================================
+// Criterion matchers J1–J5
 
 /** J1: Дефект робить неможливим виконання наступних задач плану */
 function matchJ1(report: JidokaDefectReport): boolean {
-  // Блокер: наступні задачі залежать від зламаної архітектури/функціоналу
-  return report.description.length > 0;
+  const text = `${report.description} ${report.context}`.toLowerCase();
+  const blockerKeywords = [
+    "block", "cannot proceed", "impossible to continue",
+    "breaks downstream", "architecture broken", "dependency missing",
+    "circular dependency", "deadlock", "unrecoverable",
+  ];
+  return blockerKeywords.some((kw) => text.includes(kw));
 }
 
 /** J2: Дефект суперечить вимогам з final_view/ на фундаментальному рівні */
 function matchJ2(report: JidokaDefectReport): boolean {
-  return report.description.length > 0;
+  const text = `${report.description} ${report.context}`.toLowerCase();
+  const specKeywords = [
+    "contradicts specification", "contradicts requirement",
+    "violates product spec", "fundamentally wrong",
+    "opposite of requirement", "spec mismatch",
+  ];
+  return specKeywords.some((kw) => text.includes(kw));
 }
 
 /** J3: Дефект порушує цілісність даних або безпеку */
 function matchJ3(report: JidokaDefectReport): boolean {
-  return report.description.length > 0;
+  const text = `${report.description} ${report.context}`.toLowerCase();
+  const securityKeywords = [
+    "data integrity", "data loss", "data corruption",
+    "security breach", "security vulnerability", "injection",
+    "unauthorized access", "credential leak", "token exposed",
+  ];
+  return securityKeywords.some((kw) => text.includes(kw));
 }
 
 /** J4: Дефект виявлено в >3 задачах поспіль з однаковою кореневою причиною */
@@ -96,7 +90,13 @@ function matchJ4(report: JidokaDefectReport): boolean {
 
 /** J5: Суперечність між стандартами або планом і описом продукту */
 function matchJ5(report: JidokaDefectReport): boolean {
-  return report.description.length > 0;
+  const text = `${report.description} ${report.context}`.toLowerCase();
+  const inconsistencyKeywords = [
+    "contradicts plan", "contradicts standard",
+    "inconsistent with", "plan mismatch",
+    "standard violation", "conflicts with design",
+  ];
+  return inconsistencyKeywords.some((kw) => text.includes(kw));
 }
 
 // Dispatch: criterion id → matcher
@@ -108,16 +108,8 @@ const CRITERION_MATCHERS: Record<string, (report: JidokaDefectReport) => boolean
   J5: matchJ5,
 };
 
-// =============================================================================
-// Головна функція — checkJidoka
-// Агент під час виконання задач передає дефект + criterion_id.
-// Функція перевіряє чи крок підлягає JIDOKA, чи критерій валідний.
-// Якщо хоча б один критерій спрацює → verdict = STOP.
-// =============================================================================
-
 /**
- * Перевірити один дефект проти конкретного критерію JIDOKA.
- * Використовується агентом коли він виявляє потенційний критичний дефект.
+ * Evaluate a single JIDOKA criterion against a defect report.
  */
 export function evaluateCriterion(
   criterionId: string,

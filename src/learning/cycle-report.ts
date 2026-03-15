@@ -47,7 +47,7 @@ export function collectCycleData(
 
   // Filter: events matching this cycle (by cycle field or data.cycle)
   const cycleEvents = allEvents.filter(
-    (e) => e.cycle === cycle || (e.data as any)?.cycle === cycle,
+    (e) => e.cycle === cycle || (e.data as Record<string, unknown>)?.cycle === cycle,
   );
 
   const stepCompletes = cycleEvents.filter(
@@ -59,8 +59,8 @@ export function collectCycleData(
   const censureEvents = cycleEvents.filter(
     (e) =>
       e.event_type === "step_fail" &&
-      typeof (e.data as any)?.reason === "string" &&
-      ((e.data as any).reason as string).includes("CENSURE"),
+      typeof (e.data as Record<string, unknown>)?.reason === "string" &&
+      ((e.data as Record<string, unknown>).reason as string).includes("CENSURE"),
   );
   const preconditionFails = cycleEvents.filter(
     (e) => e.event_type === "precondition_fail",
@@ -111,9 +111,10 @@ export function collectCycleData(
   const cycleTransition = allEvents.find(
     (e) =>
       e.event_type === "cycle_transition" &&
-      (e.data as any)?.to_cycle === cycle,
+      (e.data as Record<string, unknown>)?.to_cycle === cycle,
   );
-  const acStart = (cycleTransition?.data as any)?.done_percent ?? acEnd;
+  const ctData = cycleTransition?.data as Record<string, unknown> | undefined;
+  const acStart = (ctData?.done_percent as number) ?? acEnd;
 
   return {
     cycle,

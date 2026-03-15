@@ -1,15 +1,10 @@
-// =============================================================================
-// M1. Daemon Entry Point — запускає watcher + timeout monitor
-// Тримає process alive. Замкнутий контур оркестратора.
-//
-// Запуск:
-//   npx ts-node src/daemon.ts start
-//   npx ts-node src/daemon.ts stop
-//   npx ts-node src/daemon.ts status
-// =============================================================================
+// Daemon Entry Point — closed-loop controller
+// Watches for file system events, drives the orchestrator autonomously.
+// Usage: npx ts-node src/daemon.ts start|stop|status
 
 import * as path from "path";
 import type { OrchestratorConfig } from "./types";
+import { resolveConfig } from "./config";
 import { ArtifactWatcher } from "./watcher/artifact-watcher";
 import type { WatchEvent } from "./watcher/artifact-watcher";
 import { TimeoutMonitor } from "./watcher/timeout-monitor";
@@ -28,17 +23,7 @@ import { log, readRecentLog } from "./watcher/daemon-logger";
 import { loadState, saveState } from "./state-machine";
 import { checkStepTimeout } from "./watcher/step-watchdog";
 
-// =============================================================================
-// resolveConfig — визначити шляхи (скопійовано з orchestrator.ts)
-// =============================================================================
 
-function resolveConfig(): OrchestratorConfig {
-  const projectRoot = path.resolve(__dirname, "../..");
-  return {
-    control_center_path: path.join(projectRoot, "control_center"),
-    project_root: projectRoot,
-  };
-}
 
 // =============================================================================
 // OrchestratorDaemon — основний клас daemon

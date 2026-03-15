@@ -1,21 +1,7 @@
-// =============================================================================
 // Orchestrator CLI Entry Point
-// Конвертовано з: control_center/docs/system_cycle.md
-//   Секція: "Архітектура → Модель виконання" (CLI dispatch)
-// Роль: O2 — CLI entry point, з'єднує всі модулі
+// Usage: npx ts-node src/orchestrator.ts <command> [options]
 //
-// Використання:
-//   npx ts-node src/orchestrator.ts <command> [options]
-//
-// Команди:
-//   status       — поточний стан системи
-//   check        — перевірка передумов (POKA-YOKE)
-//   instructions — інструкції для поточного кроку
-//   complete     — завершити крок (--artifact <path>)
-//   decide       — прийняти рішення воріт (--decision <value>)
-//   daemon       — управління daemon (start/stop/status)
-//   queue        — розумна черга задач (scan/status/next/start/done/fail/reset)
-// =============================================================================
+// Commands: status, check, instructions, complete, decide, daemon, queue, analyze, report
 
 import * as path from "path";
 import type {
@@ -27,6 +13,7 @@ import type {
 } from "./types";
 import { parseCLIArgs } from "./types";
 import { loadState, saveState } from "./state-machine";
+import { resolveConfig } from "./config";
 import { createInitialState } from "./types";
 import { handleStatus } from "./commands/status";
 import { handleCheck } from "./commands/check";
@@ -38,21 +25,7 @@ import { handleQueue } from "./commands/queue";
 import { handleAnalyze } from "./commands/analyze";
 import { handleReport } from "./commands/report";
 
-// =============================================================================
-// resolveConfig — визначити шляхи на основі розташування скрипту
-//
-// orchestrator.ts знаходиться в control_center_code/src/
-// control_center/ — сусідня директорія (../control_center відносно коду)
-// project_root — батьківська директорія обох (control_center_code і control_center)
-// =============================================================================
 
-function resolveConfig(): OrchestratorConfig {
-  const projectRoot = path.resolve(__dirname, "../..");
-  return {
-    control_center_path: path.join(projectRoot, "control_center"),
-    project_root: projectRoot,
-  };
-}
 
 // =============================================================================
 // outputJSON — вивести результат як JSON у stdout
@@ -60,21 +33,15 @@ function resolveConfig(): OrchestratorConfig {
 // =============================================================================
 
 function outputJSON(data: unknown): void {
-  // Inject environment context into every response so the agent knows the OS
   const config = resolveConfig();
   const orchCmd = `npx ts-node "${path.join(config.project_root, "control_center_code", "src", "orchestrator.ts")}"`;
+  const isWindows = process.platform === "win32";
   const enriched = {
     environment: {
-      os: "Windows",
-      shell: "PowerShell",
+      os: process.platform,
+      shell: isWindows ? "PowerShell" : "bash",
       cwd: config.project_root,
       run_orchestrator: orchCmd,
-      warnings: [
-        "NEVER use 'cd' before commands — use the full path from run_orchestrator above.",
-        "NEVER type 'ccd' or 'сcd' — these are NOT valid commands.",
-        "Do NOT create .gitkeep files.",
-        "Use PowerShell syntax ONLY, not bash.",
-      ],
     },
     ...(data as Record<string, unknown>),
   };
